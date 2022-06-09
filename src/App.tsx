@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useMemo, useEffect, useRef, useState } from "react";
 import logo from "./logo.svg";
 import "./App.css";
 import {
@@ -7,17 +7,24 @@ import {
   createTheme,
   ThemeProvider,
   Typography,
+  ListItemText,
   CardContent,
   CardHeader,
   Grid,
   Divider,
-  Tooltip
+  Tooltip,
+  List,
+  ListItem,
+  IconButton,
 } from "@mui/material";
 import Fab from "@mui/material/Fab";
 import AddIcon from "@mui/icons-material/Add";
-import Slide from '@mui/material/Slide';
-import { TransitionProps } from '@mui/material/transitions';
+import EditIcon from "@mui/icons-material/Edit";
+import Slide from "@mui/material/Slide";
+import { TransitionProps } from "@mui/material/transitions";
 import RouteForm from "./components/RouteForm";
+import { Route } from "./consts";
+import RouteListItem from "./components/RouteListItem";
 
 let googleMaps: google.maps.Map;
 const theme = createTheme({
@@ -29,7 +36,7 @@ const Transition = React.forwardRef(function Transition(
   props: TransitionProps & {
     children: React.ReactElement;
   },
-  ref: React.Ref<unknown>,
+  ref: React.Ref<unknown>
 ) {
   return <Slide direction="up" ref={ref} {...props} />;
 });
@@ -37,8 +44,8 @@ const Transition = React.forwardRef(function Transition(
 function App() {
   const card = useRef(null);
   const cardHeader = useRef(null);
-  const [dialog, setDialog]= useState(false);
-  const myLatLng = { lat: 28.69980739308241, lng: 76.91092105942872 };
+  const [dialog, setDialog] = useState(false);
+  const [routes, setRoutes] = useState<Array<Route>>([]);
   const polylineCoords = [
     { lat: 28.69980739308241, lng: 76.91092105942872 },
     { lat: 28.699321614422008, lng: 76.91182689430835 },
@@ -49,15 +56,19 @@ function App() {
     googleMaps = new google.maps.Map(
       document.getElementById("map") as HTMLElement,
       {
-        center: myLatLng,
+        center: { lat: 28.69980739308241, lng: 76.91092105942872 },
         zoom: 8,
         disableDefaultUI: true,
       }
     );
-  }, []);
+    const localStorageRoutes = localStorage.getItem("routeList");
+    if (localStorageRoutes) {
+      setRoutes(JSON.parse(localStorageRoutes));
+    }
+  }, [dialog]);
   const clickHandler = () => {
     new google.maps.Marker({
-      position: myLatLng,
+      position: { lat: 28.69980739308241, lng: 76.91092105942872 },
       map: googleMaps,
       title: "brrr",
     });
@@ -71,12 +82,12 @@ function App() {
       strokeWeight: 2,
     });
   };
-  const handleDialogClose = () =>{
+  const handleDialogClose = () => {
     setDialog(false);
-  }
-  const handleDialogOpen= () =>{
+  };
+  const handleDialogOpen = () => {
     setDialog(true);
-  }
+  };
   return (
     <div className="App">
       <ThemeProvider theme={theme}>
@@ -96,14 +107,14 @@ function App() {
             style={{ height: "100%", width: "100%", padding: 0, margin: 0 }}
           >
             <Dialog
-            fullScreen
-            open={dialog}
-            onClose={handleDialogClose}
-            TransitionComponent={Transition}
-            style={{flex:1}}
+              fullScreen
+              open={dialog}
+              onClose={handleDialogClose}
+              TransitionComponent={Transition}
+              style={{ flex: 1 }}
             >
               <RouteForm handleClose={handleDialogClose} />
-          </Dialog>
+            </Dialog>
             <Grid item xs={1} />
             <Grid
               container
@@ -144,14 +155,29 @@ function App() {
                         direction="column"
                         style={{ height: "100%" }}
                       >
-                        <Grid item xs />
-                        <Grid item xs>
-                          <Typography align="center">
-                            No routes added yet, click on the + button to add a
-                            route.
-                          </Typography>
-                        </Grid>
-                        <Grid item xs />
+                        {routes.length > 0 ? (
+                          <Grid item xs>
+                            <List>
+                              {/* refactor secondary to another component */}
+                              {routes.map((route) => {
+                                return (
+                                  <RouteListItem route={route}/>
+                                );
+                              })}
+                            </List>
+                          </Grid>
+                        ) : (
+                          <>
+                            <Grid item xs />
+                            <Grid item xs>
+                              <Typography align="center">
+                                No routes added yet, click on the + button to
+                                add a route.
+                              </Typography>
+                            </Grid>
+                            <Grid item xs />
+                          </>
+                        )}
                       </Grid>
                     </CardContent>
                   </Card>
@@ -171,11 +197,16 @@ function App() {
                 <Card style={{ width: "50%", height: "100%", margin: 24 }} />
               </Grid>
             </Grid>
-          <Tooltip title="Create a new route">
-            <Fab color="primary" aria-label="add" style={{position: 'absolute', bottom:16, right:16}} onClick={handleDialogOpen}>
-              <AddIcon />
-            </Fab>
-          </Tooltip>
+            <Tooltip title="Create a new route">
+              <Fab
+                color="primary"
+                aria-label="add"
+                style={{ position: "absolute", bottom: 16, right: 16 }}
+                onClick={handleDialogOpen}
+              >
+                <AddIcon />
+              </Fab>
+            </Tooltip>
           </Grid>
         </div>
       </ThemeProvider>
