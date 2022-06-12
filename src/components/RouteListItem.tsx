@@ -56,7 +56,7 @@ export default function RouteListItem({
             primary={route.name}
             secondary={
               <Typography variant="body2" color="rgba(0, 0, 0, 0.67)">
-                {route.listOfStops.length} Stops
+                {route.listOfStops.length} Stops - {route.status === 'active' ? 'Active' : 'Inactive'}
               </Typography>
             }
           />

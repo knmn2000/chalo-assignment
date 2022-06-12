@@ -92,14 +92,14 @@ export default function RouteForm({ handleClose, route }: RouteFormProps) {
     } else {
       if (route !== null && routeList !== null) {
         let editedRoutes = JSON.parse(routeList);
-        editedRoutes.map((currRoute: Route) => {
+        editedRoutes.forEach((currRoute: Route) => {
           if (currRoute.routeid === route.routeid) {
             currRoute.name = routeName;
             currRoute.direction = direction;
             currRoute.status = status;
           }
         });
-        localStorage.setItem("routeList", JSON.stringify([editedRoutes]));
+        localStorage.setItem("routeList", JSON.stringify(editedRoutes));
       } else {
         const newRoute: Route = {
           name: routeName,
@@ -116,7 +116,6 @@ export default function RouteForm({ handleClose, route }: RouteFormProps) {
         } else {
           localStorage.setItem("routeList", JSON.stringify([newRoute]));
         }
-        console.log(newRoute);
       }
     }
   };
