@@ -81,7 +81,6 @@ function App() {
       (curRoute) => curRoute.routeid !== route.routeid
     );
     setRoutes(newRoutes);
-    console.log(newRoutes);
     localStorage.setItem("routeList", JSON.stringify(newRoutes));
     setSelectedRoute(null);
     clearPolylines();
@@ -134,7 +133,6 @@ function App() {
     setPolylines([]);
   };
   const handleFileImport = (e: any) => {
-    console.log("brr");
     const fileReader = new FileReader();
     fileReader.readAsText(e.target.files[0]);
     if (e.target.files[0]) {
