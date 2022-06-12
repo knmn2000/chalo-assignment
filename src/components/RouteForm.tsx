@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import {
   AppBar,
   Toolbar,
@@ -13,27 +13,47 @@ import {
   FormControl,
   FormLabel,
   Button,
+  Snackbar,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
 import { Box } from "@mui/system";
-import {Stop, RouteStatus, RouteDirection, Route} from './../consts';
+import { Stop, RouteStatus, RouteDirection, Route } from "./../consts";
 type RouteFormProps = {
   handleClose: React.MouseEventHandler<HTMLButtonElement>;
+  route: Route | null;
 };
 
-export default function RouteForm({ handleClose }: RouteFormProps) {
+export default function RouteForm({ handleClose, route }: RouteFormProps) {
   const [stops, setStops] = useState<Array<Stop>>([]);
-  const [stopName, setStopName] = useState<String>('');
-  const [stopLongitude, setStopLongitude] = useState<String>();
-  const [stopLatitude, setStopLatitude] = useState<String>();
+  const [stopName, setStopName] = useState<string>("");
+  const [stopLongitude, setStopLongitude] = useState<string>("");
+  const [stopLatitude, setStopLatitude] = useState<string>("");
+  // -1 implies no stop is being edited currently
+  const [stopId, setStopId] = useState<Number>(-1);
 
-  
-  const [routeName, setRouteName] = useState<String>('');
-  const [direction, setDirection] = useState<RouteDirection>('up');
-  const [status, setStatus] = useState<RouteStatus>('active');
+  const [routeName, setRouteName] = useState<string>("");
+  const [direction, setDirection] = useState<RouteDirection>("up");
+  const [status, setStatus] = useState<RouteStatus>("active");
+
+  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
+  const [snackbarMessage, setSnackbarMessage] = useState<string>("Error");
 
   const handleAddStops = () => {
+    if (stopName !== "" && stopLatitude !== "" && stopLongitude !== "") {
+      if (stopId !== -1) {
+        let editedStops = stops;
+        editedStops.map((stop, idx) => {
+          if (stop.stopid === stopId) {
+            stop.stopName = stopName;
+            stop.latitude = Number(stopLatitude);
+            stop.longitude = Number(stopLongitude);
+          }
+        });
+        setStops(editedStops);
+        setStopId(-1);
+        return;
+      }
       const stop: Stop = {
         stopName,
         // can be replaced with UUID
@@ -41,29 +61,91 @@ export default function RouteForm({ handleClose }: RouteFormProps) {
         latitude: Number(stopLatitude),
         longitude: Number(stopLongitude),
       };
-      console.log(stopName, stopLatitude, stopLongitude);
       setStops([...stops, stop]);
-  };
-  const handleAddRoute = () => {
-    const route: Route ={
-      name: routeName,
-      listOfStops: stops,
-      routeid: Math.floor(Math.random() * 100000),
-      direction,
-      status,
+      setStopName("");
+      setStopLatitude("");
+      setStopLongitude("");
+    } else {
+      setSnackbarMessage("Please fill all the fields");
+      setSnackbarOpen(true);
     }
-    const routeList = localStorage.getItem('routeList');
-    if(routeList){
-     localStorage.setItem('routeList', JSON.stringify([...JSON.parse(routeList), route])) 
-    }else{
-     localStorage.setItem('routeList', JSON.stringify([route])) 
-    };
-    console.log(route);
   };
+  const selectStop = (stop: Stop) => {
+    setStopName(stop.stopName);
+    setStopLatitude(stop.latitude.toString());
+    setStopLongitude(stop.longitude.toString());
+    setStopId(stop.stopid);
+  };
+  useEffect(() => {
+    if (route !== null) {
+      setRouteName(route.name);
+      setDirection(route.direction);
+      setStatus(route.status);
+      setStops(route.listOfStops);
+    }
+  }, [route, stops, stopId]);
+  const handleAddRoute = () => {
+    const routeList = localStorage.getItem("routeList");
+    if (stops.length === 0) {
+      setSnackbarMessage("No stops added");
+      setSnackbarOpen(true);
+    } else {
+      if (route !== null && routeList !== null) {
+        let editedRoutes = JSON.parse(routeList);
+        editedRoutes.map((currRoute: Route) => {
+          if (currRoute.routeid === route.routeid) {
+            currRoute.name = routeName;
+            currRoute.direction = direction;
+            currRoute.status = status;
+          }
+        });
+        localStorage.setItem("routeList", JSON.stringify([editedRoutes]));
+      } else {
+        const newRoute: Route = {
+          name: routeName,
+          listOfStops: stops,
+          routeid: Math.floor(Math.random() * 100000),
+          direction,
+          status,
+        };
+        if (routeList) {
+          localStorage.setItem(
+            "routeList",
+            JSON.stringify([...JSON.parse(routeList), newRoute])
+          );
+        } else {
+          localStorage.setItem("routeList", JSON.stringify([newRoute]));
+        }
+        console.log(newRoute);
+      }
+    }
+  };
+  const handleSnackbarClose = () => {
+    setSnackbarOpen(false);
+  };
+  const action = (
+    <React.Fragment>
+      <IconButton
+        size="small"
+        aria-label="close"
+        color="inherit"
+        onClick={handleSnackbarClose}
+      >
+        <CloseIcon fontSize="small" />
+      </IconButton>
+    </React.Fragment>
+  );
   return (
     <div
       style={{ display: "flex", flexDirection: "column", overflowX: "hidden" }}
     >
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={4000}
+        onClose={handleSnackbarClose}
+        message={snackbarMessage}
+        action={action}
+      />
       <AppBar sx={{ position: "relative" }}>
         <Toolbar>
           <IconButton
@@ -71,67 +153,36 @@ export default function RouteForm({ handleClose }: RouteFormProps) {
             color="inherit"
             onClick={handleClose}
             aria-label="close"
+            style={{flex: 1, justifyContent:'start'}}
           >
             <CloseIcon />
           </IconButton>
           <Typography
-            sx={{ ml: 2, flex: 1 }}
+            sx={{ ml: 4, flex: 4 }}
             align="center"
             variant="h6"
             component="div"
           >
-            Create route
+            {route === null ? "Create route" : "Edit route"}
           </Typography>
+          <Button
+          variant="contained"
+            aria-label="close"
+            color="success"
+            style={{flex: 1}}
+              onClick={handleAddRoute}
+          >
+               {route === null ? "Create" : "Edit"}
+          </Button>
         </Toolbar>
       </AppBar>
       <Grid direction="column" container>
         <Grid
           container
           direction="row"
-          // todo: reverse order of comps and change row-reverse to row
-          style={{ padding: 24, margin: 24, flexFlow: "row-reverse" }}
+          style={{ padding: 24, margin: 16, flexFlow: "row" }}
         >
           {/* TODO: USE STYLED TEXTFIELD */}
-          <Grid
-            container
-            spacing={2}
-            direction="column"
-            justifyContent="center"
-            alignItems="center"
-          >
-            <Grid item>
-              <TextField
-                label="Stop name"
-                id="stop-name"
-                variant="filled"
-                style={{ paddingRight: "16px" }}
-                onChange={(e) => setStopName(e.target.value)}
-              />
-            </Grid>
-            <Grid item>
-              <TextField
-                label="Latitude"
-                id="Latitude"
-                variant="outlined"
-                style={{ paddingRight: "16px" }}
-                onChange={(e) => setStopLatitude(e.target.value)}
-              />
-            </Grid>
-            <Grid item>
-              <TextField
-                label="Longitude"
-                id="Longitude"
-                variant="outlined"
-                style={{ paddingRight: "16px" }}
-                onChange={(e) => setStopLongitude(e.target.value)}
-              />
-            </Grid>
-            <Grid item>
-              <IconButton color="primary" onClick={handleAddStops}>
-                <AddIcon />
-              </IconButton>
-            </Grid>
-          </Grid>
           <Grid
             container
             spacing={2}
@@ -145,7 +196,10 @@ export default function RouteForm({ handleClose }: RouteFormProps) {
                 id="route-name"
                 variant="filled"
                 style={{ paddingRight: "16px" }}
-                onChange={(e)=>{setRouteName(e.target.value)}}
+                value={routeName}
+                onChange={(e) => {
+                  setRouteName(e.target.value);
+                }}
               />
             </Grid>
             <Grid item>
@@ -158,7 +212,9 @@ export default function RouteForm({ handleClose }: RouteFormProps) {
                   aria-labelledby="directions-row-radio-buttons-group"
                   name="row-radio-buttons-group"
                   value={direction}
-                  onChange={(e)=>setDirection(e.target.value as RouteDirection)}
+                  onChange={(e) =>
+                    setDirection(e.target.value as RouteDirection)
+                  }
                 >
                   <FormControlLabel value="up" control={<Radio />} label="Up" />
                   <FormControlLabel
@@ -178,7 +234,8 @@ export default function RouteForm({ handleClose }: RouteFormProps) {
                   row
                   aria-labelledby="directions-row-radio-buttons-group"
                   name="row-radio-buttons-group"
-                  onChange={(e)=>setStatus(e.target.value as RouteStatus)}
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as RouteStatus)}
                 >
                   <FormControlLabel
                     value="active"
@@ -193,42 +250,109 @@ export default function RouteForm({ handleClose }: RouteFormProps) {
                 </RadioGroup>
               </FormControl>
             </Grid>
+            <Grid item>
+              <Box style={{margin: '20px'}}/>
+            </Grid>
+          </Grid>
+          <Grid
+            container
+            spacing={2}
+            direction="column"
+            justifyContent="center"
+            alignItems="center"
+          >
+            <Grid item>
+              <TextField
+                label="Stop name"
+                id="stop-name"
+                variant="filled"
+                style={{ paddingRight: "16px" }}
+                value={stopName}
+                onChange={(e) => setStopName(e.target.value)}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+              />
+            </Grid>
+            <Grid item>
+              <TextField
+                label="Latitude"
+                id="Latitude"
+                variant="outlined"
+                style={{ paddingRight: "16px" }}
+                value={stopLatitude}
+                onChange={(e) => setStopLatitude(e.target.value)}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+              />
+            </Grid>
+            <Grid item>
+              <TextField
+                label="Longitude"
+                id="Longitude"
+                variant="outlined"
+                style={{ paddingRight: "16px" }}
+                value={stopLongitude}
+                onChange={(e) => setStopLongitude(e.target.value)}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+              />
+            </Grid>
+            <Grid item>
+              <IconButton color="primary" onClick={handleAddStops}>
+                <AddIcon />
+              </IconButton>
+            </Grid>
           </Grid>
         </Grid>
-        <Grid container justifyContent="center" alignItems="center">
+        <Grid container justifyContent="center" alignItems="center" >
           <Box
             sx={{
               border: "2px dashed gray",
               borderRadius: "8px",
               padding: "8px",
               alignSelf: "center",
+              margin: '16px'
             }}
           >
             {stops.length > 0 ? (
               <>
-              <Typography>
-                {stops.map((stop, index) => {
-                  if(index === stops.length - 1){
-                    return stop.stopName;
-                  }
-                  return stop.stopName + " -> ";
-                })}
-              </Typography>
+                <Typography>
+                  {stops.map((stop, index) => {
+                    if (index === stops.length - 1) {
+                      return (
+                        <Button
+                          variant="contained"
+                          size="small"
+                          onClick={() => selectStop(stop)}
+                        >
+                          {" "}
+                          {stop.stopName}{" "}
+                        </Button>
+                      );
+                    }
+                    return (
+                      <>
+                        <Button
+                          variant="contained"
+                          size="small"
+                          onClick={() => selectStop(stop)}
+                        >
+                          {" "}
+                          {stop.stopName}{" "}
+                        </Button>{" "}
+                        {" --> "}
+                      </>
+                    );
+                  })}
+                </Typography>
               </>
             ) : (
               <Typography>No stops added</Typography>
             )}
           </Box>
-        </Grid>
-        <Grid item justifyContent="center" alignSelf="center">
-          <Button
-            variant="contained"
-            style={{ padding: "8px", margin: "8px" }}
-            color="primary"
-            onClick={handleAddRoute}
-          >
-            Create
-          </Button>
         </Grid>
       </Grid>
     </div>

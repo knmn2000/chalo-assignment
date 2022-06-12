@@ -1,5 +1,5 @@
-import React, { useMemo, useEffect, useRef, useState } from "react";
-import logo from "./logo.svg";
+/*global google*/
+import React, { useEffect, useRef, useState } from "react";
 import "./App.css";
 import {
   Card,
@@ -7,24 +7,27 @@ import {
   createTheme,
   ThemeProvider,
   Typography,
-  ListItemText,
   CardContent,
   CardHeader,
   Grid,
   Divider,
   Tooltip,
   List,
-  ListItem,
+  Snackbar,
   IconButton,
 } from "@mui/material";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import UploadIcon from "@mui/icons-material/Upload";
 import Fab from "@mui/material/Fab";
 import AddIcon from "@mui/icons-material/Add";
-import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 import Slide from "@mui/material/Slide";
 import { TransitionProps } from "@mui/material/transitions";
 import RouteForm from "./components/RouteForm";
-import { Route } from "./consts";
+import { Route, Stop } from "./consts";
 import RouteListItem from "./components/RouteListItem";
+import StopList from "./components/StopList";
+import CloseIcon from "@mui/icons-material/Close";
 
 let googleMaps: google.maps.Map;
 const theme = createTheme({
@@ -41,17 +44,49 @@ const Transition = React.forwardRef(function Transition(
   return <Slide direction="up" ref={ref} {...props} />;
 });
 
+// TODO: refactor into components 
+//       remove inline styles 
 function App() {
   const card = useRef(null);
   const cardHeader = useRef(null);
   const [dialog, setDialog] = useState(false);
   const [routes, setRoutes] = useState<Array<Route>>([]);
-  const polylineCoords = [
-    { lat: 28.69980739308241, lng: 76.91092105942872 },
-    { lat: 28.699321614422008, lng: 76.91182689430835 },
-    { lat: 28.69888500171263, lng: 76.91152195979582 },
-    { lat: 28.699372749118492, lng: 76.91062509357836 },
-  ];
+  const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
+  const [routeToEdit, setRouteToEdit] = useState<Route | null>(null);
+  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
+
+  const [polylines, setPolylines] = useState<Array<google.maps.Polyline>>([]);
+  const [markers, setMarkers] = useState<Array<google.maps.Marker>>([]);
+
+  const handleDialogClose = () => {
+    setDialog(false);
+    setRouteToEdit(null);
+  };
+  const handleDialogOpen = () => {
+    setDialog(true);
+  };
+  const handleSelectRoute = (route: Route) => {
+    setSelectedRoute(route);
+  };
+  const handleEditRoute = (route: Route) => {
+    setRouteToEdit(route);
+    setDialog(true);
+  };
+  const selectStop = (stop: Stop) => {
+    googleMaps.panTo({ lat: stop.latitude, lng: stop.longitude });
+    googleMaps.setZoom(12);
+  };
+  const handleDeleteRoute = (route: Route) => {
+    const newRoutes = routes.filter(
+      (curRoute) => curRoute.routeid !== route.routeid
+    );
+    setRoutes(newRoutes);
+    console.log(newRoutes);
+    localStorage.setItem("routeList", JSON.stringify(newRoutes));
+    setSelectedRoute(null);
+    clearPolylines();
+  };
+
   useEffect(() => {
     googleMaps = new google.maps.Map(
       document.getElementById("map") as HTMLElement,
@@ -66,39 +101,104 @@ function App() {
       setRoutes(JSON.parse(localStorageRoutes));
     }
   }, [dialog]);
-  const clickHandler = () => {
-    new google.maps.Marker({
-      position: { lat: 28.69980739308241, lng: 76.91092105942872 },
-      map: googleMaps,
-      title: "brrr",
+
+  const addRoutePolylines = (route: Route) => {
+    let polylineCoords: Array<google.maps.LatLngLiteral> = [];
+    let markerArr: Array<google.maps.Marker> = [];
+    route.listOfStops.forEach((stop) => {
+      polylineCoords.push({ lat: stop.latitude, lng: stop.longitude });
+      const marker = new google.maps.Marker({
+        title: stop.stopName,
+        position: { lat: stop.latitude, lng: stop.longitude },
+        map: googleMaps,
+      });
+      markerArr.push(marker);
     });
-  };
-  const clickHandler2 = () => {
-    new google.maps.Polyline({
+    setMarkers([...markers, ...markerArr]);
+    googleMaps.panTo(polylineCoords[0]);
+    googleMaps.setZoom(10);
+    const polyline = new google.maps.Polyline({
       path: polylineCoords,
       map: googleMaps,
       strokeColor: "#FF0000",
       strokeOpacity: 1,
       strokeWeight: 2,
     });
+    setPolylines([...polylines, polyline]);
   };
-  const handleDialogClose = () => {
-    setDialog(false);
+  const clearPolylines = () => {
+    polylines.forEach((polyline) => polyline.setMap(null));
+    markers.forEach((marker) => {
+      marker.setMap(null);
+    });
+    setPolylines([]);
   };
-  const handleDialogOpen = () => {
-    setDialog(true);
+  const handleFileImport = (e: any) => {
+    console.log("brr");
+    const fileReader = new FileReader();
+    fileReader.readAsText(e.target.files[0]);
+    if (e.target.files[0]) {
+      fileReader.onload = function (event) {
+        if (event && event.target && event.target.result) {
+          localStorage.setItem("routeList", event.target.result.toString());
+          setRoutes(JSON.parse(event.target.result.toString()));
+        }
+      };
+    }
   };
+  const handleExport = () => {
+    if (routes.length === 0) {
+      setSnackbarOpen(true);
+    } else {
+      const blob = new Blob([JSON.stringify(routes)], { type: "text/json" });
+      const a = document.createElement("a");
+      a.download = "routes.json";
+      a.href = window.URL.createObjectURL(blob);
+      const clickEvt = new MouseEvent("click", {
+        view: window,
+        bubbles: true,
+        cancelable: true,
+      });
+      a.dispatchEvent(clickEvt);
+      a.remove();
+    }
+  };
+  const handleSnackbarClose = () => {
+    setSnackbarOpen(false);
+  };
+  const action = (
+    <React.Fragment>
+      <IconButton
+        size="small"
+        aria-label="close"
+        color="inherit"
+        onClick={handleSnackbarClose}
+      >
+        <CloseIcon fontSize="small" />
+      </IconButton>
+    </React.Fragment>
+  );
+
   return (
     <div className="App">
       <ThemeProvider theme={theme}>
-        {/* <div id='map' style={{height:'100%', width: '100%', position: "absolute"}}/> */}
-        <div id="map" style={{ display: "none" }} />
+        <Snackbar
+          open={snackbarOpen}
+          autoHideDuration={4000}
+          onClose={handleSnackbarClose}
+          message={"Nothing to export!"}
+          action={action}
+        />
+        <div
+          id="map"
+          style={{ height: "100%", width: "100%", position: "absolute" }}
+        />
         <div
           style={{
             height: "100%",
             width: "100%",
-            position: "absolute",
-            backgroundColor: "grey",
+            position: "fixed",
+            pointerEvents: "none",
           }}
         >
           <Grid
@@ -107,13 +207,13 @@ function App() {
             style={{ height: "100%", width: "100%", padding: 0, margin: 0 }}
           >
             <Dialog
-              fullScreen
+              // fullScreen
               open={dialog}
               onClose={handleDialogClose}
               TransitionComponent={Transition}
               style={{ flex: 1 }}
             >
-              <RouteForm handleClose={handleDialogClose} />
+              <RouteForm handleClose={handleDialogClose} route={routeToEdit} />
             </Dialog>
             <Grid item xs={1} />
             <Grid
@@ -135,10 +235,11 @@ function App() {
                   <Card
                     style={{
                       width: "50%",
-                      height: "90%",
+                      height: "60vh",
                       margin: 24,
                       display: "flex",
                       flexDirection: "column",
+                      pointerEvents: "auto",
                     }}
                     ref={card}
                   >
@@ -146,9 +247,18 @@ function App() {
                       title="Routes"
                       titleTypographyProps={{ variant: "h4", align: "center" }}
                       ref={cardHeader}
+                      action={
+                        <IconButton
+                          aria-label="Export routes"
+                          onClick={handleExport}
+                          size="large"
+                        >
+                          <OpenInNewIcon />
+                        </IconButton>
+                      }
                     />
                     <Divider />
-                    <CardContent style={{ flex: 1 }}>
+                    <CardContent style={{ flex: 1, overflowY: "scroll" }}>
                       <Grid
                         container
                         justifyContent="space-between"
@@ -158,10 +268,17 @@ function App() {
                         {routes.length > 0 ? (
                           <Grid item xs>
                             <List>
-                              {/* refactor secondary to another component */}
                               {routes.map((route) => {
                                 return (
-                                  <RouteListItem route={route}/>
+                                  <div onClick={() => addRoutePolylines(route)}>
+                                    <RouteListItem
+                                      route={route}
+                                      handleSelectRoute={handleSelectRoute}
+                                      handleDeleteRoute={handleDeleteRoute}
+                                      handleEditRoute={handleEditRoute}
+                                      key={route.routeid.toString()}
+                                    />
+                                  </div>
                                 );
                               })}
                             </List>
@@ -192,16 +309,61 @@ function App() {
                   justifyContent: "center",
                   alignItems: "center",
                   margin: 16,
+                  pointerEvents: "auto",
                 }}
               >
-                <Card style={{ width: "50%", height: "100%", margin: 24 }} />
+                <StopList
+                  selectedRoute={selectedRoute}
+                  selectStop={selectStop}
+                />
               </Grid>
             </Grid>
+            <Tooltip title="Clear">
+              <Fab
+                color="primary"
+                aria-label="clear"
+                style={{
+                  position: "absolute",
+                  top: 16,
+                  right: 16,
+                  pointerEvents: "auto",
+                }}
+                onClick={clearPolylines}
+              >
+                <DeleteIcon />
+              </Fab>
+            </Tooltip>
+            <Tooltip title="Upload routes">
+              <Fab
+                color="primary"
+                aria-label="add"
+                style={{
+                  position: "absolute",
+                  bottom: 90,
+                  right: 16,
+                  pointerEvents: "auto",
+                }}
+              >
+                <input
+                  type="file"
+                  accept=".json"
+                  id="route-upload"
+                  style={{ opacity: 0, position: "fixed" }}
+                  onChange={handleFileImport}
+                />
+                <UploadIcon />
+              </Fab>
+            </Tooltip>
             <Tooltip title="Create a new route">
               <Fab
                 color="primary"
                 aria-label="add"
-                style={{ position: "absolute", bottom: 16, right: 16 }}
+                style={{
+                  position: "absolute",
+                  bottom: 16,
+                  right: 16,
+                  pointerEvents: "auto",
+                }}
                 onClick={handleDialogOpen}
               >
                 <AddIcon />

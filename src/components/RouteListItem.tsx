@@ -4,38 +4,64 @@ import {
   ListItemText,
   ListItem,
   IconButton,
-  Divider
+  Divider,
+  ListItemButton,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
-import {Route} from './../consts';
+import { Route } from "./../consts";
 type RouteListItemProps = {
-    route : Route;
-}
-export default function RouteListItem({route}: RouteListItemProps) {
+  route: Route;
+  handleSelectRoute: Function;
+  handleDeleteRoute: Function;
+  handleEditRoute: Function;
+};
+export default function RouteListItem({
+  route,
+  handleSelectRoute,
+  handleDeleteRoute,
+  handleEditRoute,
+}: RouteListItemProps) {
   return (
     <>
-      <ListItem
-        secondaryAction={
+      <ListItemButton onClick={() => handleSelectRoute(route)}>
+        <ListItem
+          secondaryAction={
             <>
-          <IconButton edge="end" aria-label="edit" style={{marginRight: '4px'}}>
-            <EditIcon />
-          </IconButton>
-          <IconButton edge="end" aria-label="edit">
-            <DeleteIcon/>
-          </IconButton>
+              <IconButton
+                edge="end"
+                aria-label="edit"
+                style={{ marginRight: "4px" }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleEditRoute(route);
+                }}
+              >
+                <EditIcon />
+              </IconButton>
+              <IconButton
+                edge="end"
+                aria-label="edit"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteRoute(route);
+                }}
+              >
+                <DeleteIcon />
+              </IconButton>
             </>
-        }
-      >
-        <ListItemText
-          primary={route.name}
-          secondary={
-            <Typography variant="body2" color="rgba(0, 0, 0, 0.67)">
-              {route.listOfStops.length} Stops
-            </Typography>
           }
-        />
-      </ListItem>
+        >
+          <ListItemText
+            primary={route.name}
+            secondary={
+              <Typography variant="body2" color="rgba(0, 0, 0, 0.67)">
+                {route.listOfStops.length} Stops
+              </Typography>
+            }
+          />
+        </ListItem>
+      </ListItemButton>
       <Divider />
     </>
   );

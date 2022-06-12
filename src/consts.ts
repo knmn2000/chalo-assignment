@@ -3,16 +3,16 @@ export type RouteFormProps = {
 };
 export type Stop = {
   stopid: Number;
-  stopName: String;
-  latitude: Number;
-  longitude: Number;
+  stopName: string;
+  latitude: number;
+  longitude:number;
 };
 export type RouteStatus = "active" | "inactive"
 export type RouteDirection = "up" | "down";
 export type Route = {
-  name: String;
+  name: string;
   direction: RouteDirection;
-  routeid: Number;
+  routeid: number;
   status: RouteStatus;
   listOfStops: Array<Stop>;
 };
