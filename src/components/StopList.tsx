@@ -1,10 +1,10 @@
-import { Card,Button, CardContent, Typography } from "@mui/material";
-import React, { useEffect } from "react";
+import { Card, Button, CardContent, Typography } from "@mui/material";
+import React from "react";
 import { Route } from "../consts";
 
 type StopListProps = {
   selectedRoute: Route | null;
-  selectStop: Function
+  selectStop: Function;
 };
 export default function StopList({ selectedRoute, selectStop }: StopListProps) {
   // useEffect(() => {}, [selectedRoute]);
@@ -13,32 +13,44 @@ export default function StopList({ selectedRoute, selectStop }: StopListProps) {
     // the corresponding stop coordinates on the map
     // the active stop will have a green body(button body?) and the inactives
     // will be blue
-    <Card style={{ display: "flex", width: "50%", height: "15vh", margin: 24, justifyContent:'space-around'}}>
-      <CardContent style={{alignSelf: 'center'}}>
+    <Card
+      style={{
+        display: "flex",
+        width: "50%",
+        height: "15vh",
+        margin: 24,
+        justifyContent: "space-around",
+      }}
+    >
+      <CardContent style={{ alignSelf: "center" }}>
         {selectedRoute !== null ? (
           <Typography>
             {selectedRoute.listOfStops.map((stop, index) => {
               if (index === selectedRoute.listOfStops.length - 1) {
-                return <Button
-                          variant="contained"
-                          size="small"
-                          onClick={()=>selectStop(stop)}
-                        >
-                          {" "}
-                          {stop.stopName}{" "}
-                        </Button>;
+                return (
+                  <Button
+                    variant="contained"
+                    size="small"
+                    onClick={() => selectStop(stop)}
+                  >
+                    {" "}
+                    {stop.stopName}{" "}
+                  </Button>
+                );
               }
-              return   <>
-                        <Button
-                          variant="contained"
-                          size="small"
-                          onClick={()=>selectStop(stop)}
-                        >
-                          {" "}
-                          {stop.stopName}{" "}
-                        </Button>{" "}
-                        {" --> "}
-                      </>;
+              return (
+                <>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    onClick={() => selectStop(stop)}
+                  >
+                    {" "}
+                    {stop.stopName}{" "}
+                  </Button>{" "}
+                  {" --> "}
+                </>
+              );
             })}
           </Typography>
         ) : (

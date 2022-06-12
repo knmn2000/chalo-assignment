@@ -1,9 +1,8 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import {
   AppBar,
   Toolbar,
   Typography,
-  Chip,
   IconButton,
   TextField,
   Grid,
@@ -43,7 +42,7 @@ export default function RouteForm({ handleClose, route }: RouteFormProps) {
     if (stopName !== "" && stopLatitude !== "" && stopLongitude !== "") {
       if (stopId !== -1) {
         let editedStops = stops;
-        editedStops.map((stop, idx) => {
+        editedStops.forEach((stop, idx) => {
           if (stop.stopid === stopId) {
             stop.stopName = stopName;
             stop.latitude = Number(stopLatitude);
@@ -152,7 +151,7 @@ export default function RouteForm({ handleClose, route }: RouteFormProps) {
             color="inherit"
             onClick={handleClose}
             aria-label="close"
-            style={{flex: 1, justifyContent:'start'}}
+            style={{ flex: 1, justifyContent: "start" }}
           >
             <CloseIcon />
           </IconButton>
@@ -165,13 +164,13 @@ export default function RouteForm({ handleClose, route }: RouteFormProps) {
             {route === null ? "Create route" : "Edit route"}
           </Typography>
           <Button
-          variant="contained"
+            variant="contained"
             aria-label="close"
             color="success"
-            style={{flex: 1}}
-              onClick={handleAddRoute}
+            style={{ flex: 1 }}
+            onClick={handleAddRoute}
           >
-               {route === null ? "Create" : "Edit"}
+            {route === null ? "Create" : "Edit"}
           </Button>
         </Toolbar>
       </AppBar>
@@ -250,7 +249,7 @@ export default function RouteForm({ handleClose, route }: RouteFormProps) {
               </FormControl>
             </Grid>
             <Grid item>
-              <Box style={{margin: '20px'}}/>
+              <Box style={{ margin: "20px" }} />
             </Grid>
           </Grid>
           <Grid
@@ -306,14 +305,14 @@ export default function RouteForm({ handleClose, route }: RouteFormProps) {
             </Grid>
           </Grid>
         </Grid>
-        <Grid container justifyContent="center" alignItems="center" >
+        <Grid container justifyContent="center" alignItems="center">
           <Box
             sx={{
               border: "2px dashed gray",
               borderRadius: "8px",
               padding: "8px",
               alignSelf: "center",
-              margin: '16px'
+              margin: "16px",
             }}
           >
             {stops.length > 0 ? (

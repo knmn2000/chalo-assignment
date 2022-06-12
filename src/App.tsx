@@ -44,8 +44,8 @@ const Transition = React.forwardRef(function Transition(
   return <Slide direction="up" ref={ref} {...props} />;
 });
 
-// TODO: refactor into components 
-//       remove inline styles 
+// TODO: refactor into components
+//       remove inline styles
 function App() {
   const card = useRef(null);
   const cardHeader = useRef(null);
